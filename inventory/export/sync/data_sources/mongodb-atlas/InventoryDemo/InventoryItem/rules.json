@@ -1,0 +1,14 @@
+{
+    "collection": "InventoryItem",
+    "database": "InventoryDemo",
+    "roles": [
+        {
+            "name": "default",
+            "apply_when": {},
+            "write": true,
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        }
+    ]
+}

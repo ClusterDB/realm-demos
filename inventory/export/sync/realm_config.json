@@ -1,0 +1,7 @@
+{
+    "app_id": "inventorysync-ctnnu",
+    "config_version": 20210101,
+    "name": "InventorySync",
+    "location": "US-VA",
+    "deployment_model": "GLOBAL"
+}
