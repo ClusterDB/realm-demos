@@ -58,6 +58,15 @@ jobs:
            output=$(realm-cli app describe)
            app_id=$(echo $output | sed 's/^.*client_app_id": "\([^"]*\).*/\1/')
            echo "REALM_APP_ID=$app_id" >> $GITHUB_ENV
+    - name: "Archive the app"
+      run: |
+           pwd 
+           cd inventory/clients/ios-swiftui/InventoryDemo
+           pwd
+           ls
+           echo ${{ env.REALM_APP_ID }}
+           xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive -allowProvisioningUpdates
+           xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
            
 #     - name: "Build mobile app & run tests"
 #       run: |
@@ -87,18 +96,10 @@ jobs:
 
 # TODO: When do I need to pass the app id?
 # TODO: Upload to app store
-  archiveApp:
-    runs-on: macos-latest
-    needs: build
-#    if: ${{ github.ref == 'refs/heads/staging' }}
-    steps:
-    - uses: actions/checkout@v2
-    - name: "Archive the app"
-      run: |
-           pwd 
-           cd inventory/clients/ios-swiftui/InventoryDemo
-           pwd
-           ls
-           echo ${{ env.REALM_APP_ID }}
-           xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive
-           xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
+#   archiveApp:
+#     runs-on: macos-latest
+#     needs: build
+# #    if: ${{ github.ref == 'refs/heads/staging' }}
+#     steps:
+#     - uses: actions/checkout@v2
+    
