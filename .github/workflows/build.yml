@@ -95,6 +95,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: "Archive the app"
       run: |
+           pwd 
+           cd inventory/clients/ios-swiftui/InventoryDemo
+           pwd
+           ls
            echo ${{ env.REALM_APP_ID }}
            xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive
            xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
