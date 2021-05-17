@@ -84,3 +84,17 @@ jobs:
       run: |
            git merge origin/staging
            git push
+
+# TODO: When do I need to pass the app id?
+# TODO: Upload to app store
+  archiveApp:
+    runs-on: macos-latest
+    needs: build
+#    if: ${{ github.ref == 'refs/heads/staging' }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: "Archive the app"
+      run: |
+           echo ${{ env.REALM_APP_ID }}
+           xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive
+           xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
