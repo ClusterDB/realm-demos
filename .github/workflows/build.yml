@@ -13,18 +13,16 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 #     Setting env vars based on https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable      
-    - name: "Get current time"
+    - name: "Get current time to use later"
       run: echo "CURRENT_TIME=$(date +'%Y-%m-%d_%s')" >> $GITHUB_ENV
     - name: "Are we pushing to the Main branch?"
       if: ${{ github.ref == 'refs/heads/main' }}
       run: | 
            echo "REALM_APP_ID=inventorysync-ctnnu" >> $GITHUB_ENV
-#           echo "IS_DYNAMICALLY_GENERATED_APP=false" >> $GITHUB_ENV
     - name: "Are we pushing to the Staging branch?"
       if: ${{ github.ref == 'refs/heads/staging' }}
       run: | 
            echo "REALM_APP_ID=inventorydemo-staging-zahjj" >> $GITHUB_ENV
-#           echo "IS_DYNAMICALLY_GENERATED_APP=false" >> $GITHUB_ENV
 # For Pull Requests, update the database name to be a unique name based on the current date and time
 # Also, set the environment to be the Testing envrionment
     - name: "Set environment variables for all other runs"
@@ -59,8 +57,14 @@ jobs:
            output=$(realm-cli app describe)
            app_id=$(echo $output | sed 's/^.*client_app_id": "\([^"]*\).*/\1/')
            echo "REALM_APP_ID=$app_id" >> $GITHUB_ENV
-    # This step taken from https://docs.github.com/en/actions/guides/installing-an-apple-certificate-on-macos-runners-for-xcode-development       
-    - name: "Install the Apple certificate and provisioning profile"
+    - name: "Build mobile app & run tests"
+      run: |
+           echo "the realm app id is: $REALM_APP_ID"
+           cd inventory/clients/ios-swiftui/InventoryDemo
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test
+# This step taken from https://docs.github.com/en/actions/guides/installing-an-apple-certificate-on-macos-runners-for-xcode-development       
+    - name: "Install the Apple certificate and provisioning profile (so we can create the archive)"
+      if: ${{ github.ref == 'refs/heads/main' }}
       env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -88,20 +92,18 @@ jobs:
           # apply provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-    - name: "Archive the app"
+    - name: "Archive the mobile app"
+      if: ${{ github.ref == 'refs/heads/main' }}
       run: |
-           pwd 
            cd inventory/clients/ios-swiftui/InventoryDemo
-           pwd
-           ls
            echo ${{ env.REALM_APP_ID }}
            xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive -allowProvisioningUpdates
            xcodebuild -exportArchive -archivePath $PWD/build/ci.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
-           pwd
-           ls
+# This step stores the archive in a GitHub release.
+# Alternatively, you could upload the app directly for beta testing and/or release
     - name: "Store the Archive in a GitHub Release"
       uses: softprops/action-gh-release@v1
-#      if: ${{ github.ref == 'refs/heads/main' }}
+      if: ${{ github.ref == 'refs/heads/main' }}
       with:
           files: |
             inventory/clients/ios-swiftui/InventoryDemo/build/InventoryDemo.ipa
@@ -109,17 +111,14 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
            
-#     - name: "Build mobile app & run tests"
-#       run: |
-#            echo "the realm app id is: $REALM_APP_ID"
-#            cd inventory/clients/ios-swiftui/InventoryDemo
-#            xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test
+
 # Could choose to skip deleting apps where tests fail so you could manually investigate
-# Not currently working due to a bug in the realm-cli
+# Not currently working due to a bug in the realm-cli. Also need to delete mobile database
 #     - name: "Delete dynamically generated Realm app"
 #       if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
 #       run: realm-cli app delete -a $REALM_APP_ID
 
+# After the tests pass, push commits from the staging branch to the main branch
   pushToProdBranch:
     runs-on: macos-latest
     needs: build
@@ -134,13 +133,4 @@ jobs:
       run: |
            git merge origin/staging
            git push
-
-# TODO: When do I need to pass the app id?
-# TODO: Upload to app store
-#   archiveApp:
-#     runs-on: macos-latest
-#     needs: build
-# #    if: ${{ github.ref == 'refs/heads/staging' }}
-#     steps:
-#     - uses: actions/checkout@v2
     
