@@ -61,7 +61,16 @@ jobs:
       run: |
            echo "the realm app id is: $REALM_APP_ID"
            cd inventory/clients/ios-swiftui/InventoryDemo
-           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test
+
+           # Build the app for testing
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' build-for-testing
+
+           # Run the tests on a variety of simulators
+           # Optionally, could put these in separate jobs to run in parallel
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building     
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPad Pro (12.9-inch) (4th generation)' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+
 # This step taken from https://docs.github.com/en/actions/guides/installing-an-apple-certificate-on-macos-runners-for-xcode-development       
     - name: "Install the Apple certificate and provisioning profile (so we can create the archive)"
       if: ${{ github.ref == 'refs/heads/main' }}
