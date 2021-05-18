@@ -95,7 +95,7 @@ jobs:
            ls
            echo ${{ env.REALM_APP_ID }}
            xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive -allowProvisioningUpdates
-           xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
+           xcodebuild -exportArchive -archivePath $PWD/build/ci.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
            
 #     - name: "Build mobile app & run tests"
 #       run: |
