@@ -13,6 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 #     Setting env vars based on https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable      
+    - name: "Get current time"
+      run: echo "CURRENT_TIME=$(date +'%Y-%m-%d.%s')" >> $GITHUB_ENV
     - name: "Are we pushing to the Main branch?"
       if: ${{ github.ref == 'refs/heads/main' }}
       run: | 
@@ -29,8 +31,7 @@ jobs:
       if: ${{ !env.REALM_APP_ID }}
       run: | 
            cd inventory/export/sync/environments
-           time=$(date +%s%N)
-           printf '{\n     "values": {"databaseName": "InventoryDemo-%s"}\n}' "$time" > testing.json     
+           printf '{\n     "values": {"databaseName": "InventoryDemo-%s"}\n}' "${{ env.CURRENT_TIME }}" > testing.json     
            cd ..
            sed -i txt 's/{/{ "environment": "testing",/' realm_config.json 
            echo "IS_DYNAMICALLY_GENERATED_APP=true" >> $GITHUB_ENV
@@ -67,6 +68,17 @@ jobs:
            echo ${{ env.REALM_APP_ID }}
            xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive -allowProvisioningUpdates
            xcodebuild -exportArchive -archivePath $PWD/build/CLI.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
+           pwd
+           ls
+    - name: "Store the Archive in a GitHub Release"
+      uses: softprops/action-gh-release@v1
+#      if: ${{ github.ref == 'refs/heads/main' }}
+      with:
+          files: |
+            inventory/clients/ios-swiftui/InventoryDemo/build/InventoryDemo.ipa
+          tag_name: ${{ env.CURRENT_TIME }}
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
            
 #     - name: "Build mobile app & run tests"
 #       run: |
