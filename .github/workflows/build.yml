@@ -4,7 +4,6 @@ name: Build
 
 # TODO: See if we can cache realm cli as it takes 2 minutes to install
 
-# Will need to expand this to other branches
 on: [push, pull_request]
 
 jobs:    
@@ -12,66 +11,116 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
-#     Setting env vars based on https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable      
-    - name: "Get current time to use later"
+
+# SET ENVIRONMENT VARIABLES WE WILL USE IN LATER STEPS
+
+# For more information on setting environment variables in GitHub Actions, 
+# see https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable      
+    - name: "Store current time in variable"
       run: echo "CURRENT_TIME=$(date +'%Y-%m-%d_%s')" >> $GITHUB_ENV
-    - name: "Are we pushing to the Main branch?"
+
+    - name: "Is this a push to the Main branch?"
       if: ${{ github.ref == 'refs/heads/main' }}
-      run: | 
-           echo "REALM_APP_ID=inventorysync-ctnnu" >> $GITHUB_ENV
-    - name: "Are we pushing to the Staging branch?"
+      run: echo "REALM_APP_ID=inventorysync-ctnnu" >> $GITHUB_ENV
+
+    - name: "Is this a push to the Staging branch?"
       if: ${{ github.ref == 'refs/heads/staging' }}
-      run: | 
-           echo "REALM_APP_ID=inventorydemo-staging-zahjj" >> $GITHUB_ENV
-# For Pull Requests, update the database name to be a unique name based on the current date and time
-# Also, set the environment to be the Testing envrionment
+      run: echo "REALM_APP_ID=inventorydemo-staging-zahjj" >> $GITHUB_ENV
+
+# For Pull Requests, create a new Realm app with a new database
+# The Realm app will be stored in an Atlas project used only for CI/CD
+# The Realm app should use the Testing environment
+# For more information on Realm environments, 
+# see https://docs.mongodb.com/realm/values-and-secrets/define-environment-values/
     - name: "Set environment variables for all other runs"
       if: ${{ !env.REALM_APP_ID }}
       run: | 
+           
+           # Update the databaseName in the testing.json environment file
+           # Set the database name to contain the current time to ensure it's unique
            cd inventory/export/sync/environments
            printf '{\n     "values": {"databaseName": "InventoryDemo-%s"}\n}' "${{ env.CURRENT_TIME }}" > testing.json     
+           
+           # Indicate that the Realm app should use the Testing environment by updating realm_config.json
            cd ..
            sed -i txt 's/{/{ "environment": "testing",/' realm_config.json 
+
+           # Create a new environment variable named IS_DYNAMICALLY_GENERATED_APP to indicate this is
+           # a dynamically generated app (we aren't updating the existing Staging or Production apps)
            echo "IS_DYNAMICALLY_GENERATED_APP=true" >> $GITHUB_ENV
+
+# INSTALL THE REALM-CLI AND AUTHENTICATE
+
+# For more information on the MongoDB Realm CLI, 
+# see https://docs.mongodb.com/realm/deploy/realm-cli-reference/
     - name: "Install the Realm CLI"
       run: npm install -g mongodb-realm-cli@beta
+
+# Creating two separate authentication steps since specifying the project id 
+# isn't working so we need to use separate API keys
+# for dynamically generated apps vs the static Staging and Production apps
+# Need to think through splitting this for Dev pushes
+
 # Adding --realm-url and --atlas-url to login command to workaround authentication error           
     - name: "Authenticate to the Realm CLI (using generic API key)"
       if: ${{ env.REALM_APP_ID }}
       run: realm-cli login --api-key="${{ secrets.REALM_API_PUBLIC_KEY }}" --private-api-key="${{ secrets.REALM_API_PRIVATE_KEY }}" --realm-url https://realm.mongodb.com --atlas-url https://cloud.mongodb.com
-# Making these separate steps since specifying the project id isn't working so we need to use separate API keys
-# Need to think through splitting this for Dev pushes
+
     - name: "Authenticate to the Realm CLI (using API key for Testing Project)"
       if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
       run: realm-cli login --api-key="${{ secrets.REALM_API_TESTING_PROJECT_PUBLIC_KEY }}" --private-api-key="${{ secrets.REALM_API_TESTING_PROJECT_PRIVATE_KEY }}" --realm-url https://realm.mongodb.com --atlas-url https://cloud.mongodb.com
+
+# PUSH THE REALM APP
+
     - name: "Push updated copy of the Realm app (Staging or Main branch)"
       if: ${{ env.REALM_APP_ID }}
       run: | 
            cd inventory/export/sync
            realm-cli push --remote="${{ env.REALM_APP_ID }}" -y
+
     - name: "Create a new Realm app for pull requests"
       if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
       run: |
            cd inventory/export/sync
            realm-cli push -y
+
+           # Retrieve and store the Realm App ID from the output of calling 'realm-cli app describe'
            output=$(realm-cli app describe)
            app_id=$(echo $output | sed 's/^.*client_app_id": "\([^"]*\).*/\1/')
            echo "REALM_APP_ID=$app_id" >> $GITHUB_ENV
+
+# RUN TESTS
+
+# Build the app for testing and then run the tests using a variety of simulators
+# If you have integration tests, you could also choose to checkout previous releases
+# and run the integration tests against the current version of the Realm app to
+# ensure backwards compatibility 
     - name: "Build mobile app & run tests"
       run: |
-           echo "the realm app id is: $REALM_APP_ID"
            cd inventory/clients/ios-swiftui/InventoryDemo
 
            # Build the app for testing
            xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' build-for-testing
 
+           # Define the simulators that will be used for testing
+           iPhone12Pro='platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4'
+           iPhone12='platform=iOS Simulator,name=iPhone 12,OS=14.4'
+           iPadPro4='platform=iOS Simulator,name=iPad Pro (12.9-inch) (4th generation)'
+
            # Run the tests on a variety of simulators
            # Optionally, could put these in separate jobs to run in parallel
-           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
-           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building     
-           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPad Pro (12.9-inch) (4th generation)' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12Pro" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building     
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPadPro4" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
 
-# This step taken from https://docs.github.com/en/actions/guides/installing-an-apple-certificate-on-macos-runners-for-xcode-development       
+# ARCHIVE THE APP (ONLY FOR PUSHES TO THE MAIN BRANCH)
+
+# If we are pushing to the main branch (meaning we are pushing to production),
+# install the Apple certificate and provisioning profile
+# These need to be installed in order to create the archive
+# The code from this step is taken from GitHub Actions documentation available
+# at https://docs.github.com/en/actions/guides/installing-an-apple-certificate-on-macos-runners-for-xcode-development 
+# CC-BY Attribution 4.0 International License: https://github.com/github/docs/blob/main/LICENSE    
     - name: "Install the Apple certificate and provisioning profile (so we can create the archive)"
       if: ${{ github.ref == 'refs/heads/main' }}
       env:
@@ -101,6 +150,9 @@ jobs:
           # apply provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+# If we are pushing to the main branch (meaning we are pushing to production),
+# create the mobile app archive (.ipa file)
     - name: "Archive the mobile app"
       if: ${{ github.ref == 'refs/heads/main' }}
       run: |
@@ -108,7 +160,9 @@ jobs:
            echo ${{ env.REALM_APP_ID }}
            xcodebuild -workspace InventoryDemo.xcodeproj/project.xcworkspace/ -scheme ci archive REALM_APP_ID=${{ env.REALM_APP_ID }} -archivePath $PWD/build/ci.xcarchive -allowProvisioningUpdates
            xcodebuild -exportArchive -archivePath $PWD/build/ci.xcarchive -exportPath $PWD/build -exportOptionsPlist $PWD/build/ci.xcarchive/Info.plist
-# This step stores the archive in a GitHub release.
+
+# If we are pushing to the main branch (meaning we are pushing to production),
+# store the archive in a GitHub release
 # Alternatively, you could upload the app directly for beta testing and/or release
     - name: "Store the Archive in a GitHub Release"
       uses: softprops/action-gh-release@v1
@@ -119,16 +173,27 @@ jobs:
           tag_name: ${{ env.CURRENT_TIME }}
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           
 
-# Could choose to skip deleting apps where tests fail so you could manually investigate
-# Not currently working due to a bug in the realm-cli. Also need to delete mobile database
+# CLEANUP
+
+# If a Realm app was dynamically generated, delete the app and its associated database
+# Alternatively, could choose to skip deleting apps and their databases when
+# the tests fail to allow for manual investigation
+# Note: this step is currently NOT working due to a bug in the realm-cli:
+# https://jira.mongodb.org/browse/REALMC-8645
 #     - name: "Delete dynamically generated Realm app"
 #       if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
 #       run: realm-cli app delete -a $REALM_APP_ID
 
-# After the tests pass, push commits from the staging branch to the main branch
-  pushToProdBranch:
+# TODO: Add step to delete database
+
+# AUTOMATICALLY PUSH COMMITS FROM STAGING BRANCH TO MAIN BRANCH  
+
+# If this is a push to the Staging branch AND all tests have passed,
+# push the commit(s) to the main branch (production)
+# Could skip this step if you want to manually run tests on staging
+# or have fewer releases to production
+  pushToMainBranch:
     runs-on: macos-latest
     needs: build
     if: ${{ github.ref == 'refs/heads/staging' }}
