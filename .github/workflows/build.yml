@@ -1,9 +1,5 @@
 name: Build
 
-# TODO: See if we can speed up the xcodebuild command
-
-# TODO: See if we can cache realm cli as it takes 2 minutes to install
-
 on: [push, pull_request]
 
 jobs:    
@@ -13,9 +9,9 @@ jobs:
     - uses: actions/checkout@v2
 
 # SET ENVIRONMENT VARIABLES WE WILL USE IN LATER STEPS
-
 # For more information on setting environment variables in GitHub Actions, 
-# see https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable      
+# see https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable 
+
     - name: "Store current time in variable"
       run: echo "CURRENT_TIME=$(date +'%Y-%m-%d_%s')" >> $GITHUB_ENV
 
@@ -84,7 +80,7 @@ jobs:
            cd inventory/export/sync
            realm-cli push -y
 
-           # Retrieve and store the Realm App ID from the output of calling 'realm-cli app describe'
+           # Retrieve and store the Realm App ID from the output of 'realm-cli app describe'
            output=$(realm-cli app describe)
            app_id=$(echo $output | sed 's/^.*client_app_id": "\([^"]*\).*/\1/')
            echo "REALM_APP_ID=$app_id" >> $GITHUB_ENV
@@ -177,7 +173,7 @@ jobs:
 # CLEANUP
 
 # If a Realm app was dynamically generated, delete the app and its associated database
-# Alternatively, could choose to skip deleting apps and their databases when
+# Alternatively, you could choose to skip deleting apps and their databases when
 # the tests fail to allow for manual investigation
 # Note: this step is currently NOT working due to a bug in the realm-cli:
 # https://jira.mongodb.org/browse/REALMC-8645
@@ -192,7 +188,7 @@ jobs:
 # If this is a push to the Staging branch AND all tests have passed,
 # push the commit(s) to the main branch (production)
 # Could skip this step if you want to manually run tests on staging
-# or have fewer releases to production
+# or want fewer releases to production
   pushToMainBranch:
     runs-on: macos-latest
     needs: build
