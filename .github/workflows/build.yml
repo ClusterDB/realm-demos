@@ -186,7 +186,7 @@ jobs:
       if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
       run: |
            # brew install mongodb/brew/mongodb-community-shell
-           mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username githubactions
+           mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username ${{ secrets.ATLAS_USERNAME }} --password ${{ secrets.ATLAS_PASSWORD }}
            use InventoryDemo-${{ env.CURRENT_TIME }}
            db.dropDatabase()           
 
