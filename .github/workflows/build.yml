@@ -1,6 +1,9 @@
 name: Build
 
-on: [push, pull_request]
+  push:
+    branches: [ main, staging ]
+  pull_request:
+    branches: [ staging ]
 
 jobs:    
   build:
