@@ -91,23 +91,23 @@ jobs:
 # If you have integration tests, you could also choose to checkout previous releases
 # and run the integration tests against the current version of the Realm app to
 # ensure backwards compatibility 
-    # - name: "Build mobile app & run tests"
-    #   run: |
-    #        cd inventory/clients/ios-swiftui/InventoryDemo
+    - name: "Build mobile app & run tests"
+      run: |
+           cd inventory/clients/ios-swiftui/InventoryDemo
 
-    #        # Build the app for testing
-    #        xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' build-for-testing
+           # Build the app for testing
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4' -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' build-for-testing
 
-    #        # Define the simulators that will be used for testing
-    #        iPhone12Pro='platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4'
-    #        iPhone12='platform=iOS Simulator,name=iPhone 12,OS=14.4'
-    #        iPadPro4='platform=iOS Simulator,name=iPad Pro (12.9-inch) (4th generation)'
+           # Define the simulators that will be used for testing
+           iPhone12Pro='platform=iOS Simulator,name=iPhone 12 Pro Max,OS=14.4'
+           iPhone12='platform=iOS Simulator,name=iPhone 12,OS=14.4'
+           iPadPro4='platform=iOS Simulator,name=iPad Pro (12.9-inch) (4th generation)'
 
-    #        # Run the tests on a variety of simulators
-    #        # Optionally, could put these in separate jobs to run in parallel
-    #        xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12Pro" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
-    #        xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building     
-    #        xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPadPro4" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+           # Run the tests on a variety of simulators
+           # Optionally, could put these in separate jobs to run in parallel
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12Pro" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPhone12" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building     
+           xcodebuild -project InventoryDemo.xcodeproj -scheme "ci" -sdk iphonesimulator -destination "$iPadPro4" -derivedDataPath './output' REALM_APP_ID='${{ env.REALM_APP_ID }}' test-without-building
 
 # ARCHIVE THE APP (ONLY FOR PUSHES TO THE MAIN BRANCH)
 
