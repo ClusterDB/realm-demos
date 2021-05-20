@@ -182,10 +182,10 @@ jobs:
     #   run: realm-cli app delete -a $REALM_APP_ID
 
 # TODO: test Atlas access list      
-    - name: "Delete dynamically generated database"
-      if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
-      run: |
-           mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username ${{ secrets.ATLAS_USERNAME }} --password ${{ secrets.ATLAS_PASSWORD }} --eval "db.dropDatabase()"
+    # - name: "Delete dynamically generated database"
+    #   if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
+    #   run: |
+    #        mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username ${{ secrets.ATLAS_USERNAME }} --password ${{ secrets.ATLAS_PASSWORD }} --eval "db.dropDatabase()"
 
 # AUTOMATICALLY PUSH COMMITS FROM STAGING BRANCH TO MAIN BRANCH  
 
