@@ -181,11 +181,15 @@ jobs:
     #   if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
     #   run: realm-cli app delete -a $REALM_APP_ID
 
+# Delete the database associated with the Realm app
+# TODO: The database is appearing a few minutes after app creation, which I think is due
+# to the sync taking a couple of minutes to get setup. I'm wondering if this problem will
+# go away if we delete the app first
 # TODO: test Atlas access list      
-    # - name: "Delete dynamically generated database"
-    #   if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
-    #   run: |
-    #        mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username ${{ secrets.ATLAS_USERNAME }} --password ${{ secrets.ATLAS_PASSWORD }} --eval "db.dropDatabase()"
+    - name: "Delete dynamically generated database"
+      if: ${{ env.IS_DYNAMICALLY_GENERATED_APP }}
+      run: |
+           mongo "mongodb+srv://cluster0.blumg.mongodb.net/InventoryDemo-${{ env.CURRENT_TIME }}" --username ${{ secrets.ATLAS_USERNAME }} --password ${{ secrets.ATLAS_PASSWORD }} --eval "db.dropDatabase()"
 
 # AUTOMATICALLY PUSH COMMITS FROM STAGING BRANCH TO MAIN BRANCH  
 
