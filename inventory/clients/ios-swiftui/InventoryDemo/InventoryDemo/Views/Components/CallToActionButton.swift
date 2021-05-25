@@ -33,7 +33,7 @@ struct CallToActionButton: View {
                 Spacer(minLength: Dimensions.labelSpacing)
             }
             .foregroundColor(.white)
-            .background(Color.blue)
+            .background(Color.pink)
             .cornerRadius(Dimensions.radius)
         }
     }
