@@ -12,6 +12,7 @@ on:
 jobs:    
   build:
     runs-on: ubuntu-latest
+    steps:
 
 # Install the Realm CLI & authenticate
 # For more information on the MongoDB Realm CLI, 
