@@ -8,7 +8,7 @@ on:
       - '!main'
       - '!staging'
       - '!my-fake-branch'
-
+ 
 jobs:    
   deleteArtifacts:
     if: github.event.ref_type == 'branch'
