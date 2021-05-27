@@ -1,0 +1,52 @@
+name: "Delete feature branch artifacts upon branch deletion"
+
+# RUN THIS WORKFLOW WHEN ANY BRANCH BESIDES MAIN OR STAGING IS DELETED
+on: 
+  delete:
+    branches:
+      - '*'
+      - '!main'
+      - '!staging'
+      - '!my-fake-branch'
+
+jobs:    
+  build:
+    runs-on: ubuntu-latest
+
+# Install the Realm CLI & authenticate
+# For more information on the MongoDB Realm CLI, 
+# see https://docs.mongodb.com/realm/deploy/realm-cli-reference/
+# Adding --realm-url and --atlas-url to login command to workaround authentication error  
+    - name: "Install the Realm CLI & authenticate"
+      run: |
+           npm install -g mongodb-realm-cli@beta
+           realm-cli login --api-key="${{ secrets.REALM_API_PUBLIC_KEY }}" --private-api-key="${{ secrets.REALM_API_PRIVATE_KEY }}" --realm-url https://realm.mongodb.com --atlas-url https://cloud.mongodb.com
+
+# Store the name of the branch that is being deleted in an environment variable
+    - name: "Store the name of the branch"
+      run: | 
+
+           ref=$(echo ${{ github.ref }})
+           branch=$(echo "${ref##*/}")
+           echo "FEATURE_BRANCH=$branch" >> $GITHUB_ENV
+
+# Delete the Realm app associated with the branch that is being deleted
+    - name: "Delete the Realm app associated with the branch"
+      run: | 
+
+           # Get the Realm app associated with this branch
+           # Note: this requires the IP address of the GitHub Actions vm to be in the Atlas access list  
+           output=$(mongo "mongodb+srv://${{ secrets.ATLAS_URI_FEATURE_BRANCHES }}/GitHubActionsMetadata" --username ${{ secrets.ATLAS_USERNAME_FEATURE_BRANCHES }} --password ${{ secrets.ATLAS_PASSWORD_FEATURE_BRANCHES }} --eval "db.metadata.findOne({'branch': '${{ env.FEATURE_BRANCH }}'})")
+
+           if [[ $output == *null ]]; then
+              echo "No Realm app found for this branch"
+           else
+              app_id=$(echo $output | sed 's/^.*realm_app_id" : "\([^"]*\).*/\1/')
+              echo "A Realm app was found for this branch: $app_id. It will now be deleted"
+              realm-cli app delete --app $app_id
+           fi
+
+# Delete the database associated with the branch that is being deleted
+    - name: "Delete the database associated with the branch"
+      run: | 
+           mongo "mongodb+srv://${{ secrets.ATLAS_URI_FEATURE_BRANCHES }}/InventoryDemo-${{ env.FEATURE_BRANCH }}" --username ${{ secrets.ATLAS_USERNAME_FEATURE_BRANCHES }} --password ${{ secrets.ATLAS_PASSWORD_FEATURE_BRANCHES }} --eval "db.dropDatabase()"
