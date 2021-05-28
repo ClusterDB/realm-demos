@@ -33,7 +33,7 @@ struct CallToActionButton: View {
                 Spacer(minLength: Dimensions.labelSpacing)
             }
             .foregroundColor(.white)
-            .background(Color.blue)
+            .background(Color.pink)
             .cornerRadius(Dimensions.radius)
         }
     }
@@ -42,7 +42,6 @@ struct CallToActionButton: View {
 struct CallToActionButton_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            CallToActionButton(title: "Button", showingArrow: true, action: {})
             CallToActionButton(title: "Button", showingArrow: false, action: {})
         }
         .previewLayout(.sizeThatFits)
