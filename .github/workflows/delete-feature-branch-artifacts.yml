@@ -1,12 +1,13 @@
 name: "Delete feature branch artifacts upon branch deletion"
 
 # RUN THIS WORKFLOW WHEN ANY BRANCH BESIDES MAIN OR STAGING IS DELETED
+# WARNING: This branches-ignore is not working
+# Asked for help in https://github.community/t/how-to-ignore-branches-for-delete-events/182419
 on: 
   delete:
     branches-ignore:
-      - 'refs/heads/main'
-      - 'refs/heads/staging'
-      - 'refs/heads/my-fake-branch'
+      - main
+      - staging
  
 jobs:    
   deleteArtifacts:
@@ -26,7 +27,6 @@ jobs:
 # Store the name of the branch that is being deleted in an environment variable
     - name: "Store the name of the branch"
       run: | 
-
            ref=$(echo ${{ github.event.ref }})
            branch=$(echo "${ref##*/}")
            echo "FEATURE_BRANCH=$branch" >> $GITHUB_ENV
@@ -42,9 +42,15 @@ jobs:
            if [[ $output == *null ]]; then
               echo "No Realm app found for this branch"
            else
+              # Parse the output to retrieve the realm_app_id
               app_id=$(echo $output | sed 's/^.*realm_app_id" : "\([^"]*\).*/\1/')
+              
+              # Delete the Realm app
               echo "A Realm app was found for this branch: $app_id. It will now be deleted"
               realm-cli app delete --app $app_id
+
+              # Delete the record in the GitHubActionsMetadata database
+              output=$(mongo "mongodb+srv://${{ secrets.ATLAS_URI_FEATURE_BRANCHES }}/GitHubActionsMetadata" --username ${{ secrets.ATLAS_USERNAME_FEATURE_BRANCHES }} --password ${{ secrets.ATLAS_PASSWORD_FEATURE_BRANCHES }} --eval "db.metadata.deleteOne({'branch': '${{ env.FEATURE_BRANCH }}'})")
            fi
 
 # Delete the database associated with the branch that is being deleted
