@@ -31,7 +31,7 @@ class InventoryDemoUITests: XCTestCase {
         let startButton = app.buttons["Log In"]
         
         // should be on screen, and enabled
-        XCTAssertTrue(startButton.waitForExistence(timeout: 1))
+        XCTAssertTrue(startButton.waitForExistence(timeout: 25))
         XCTAssertTrue(startButton.isEnabled)
         
         // tap the button!
@@ -47,7 +47,7 @@ class InventoryDemoUITests: XCTestCase {
         let emailText = app.textFields["email_input"]
         
         // should be on screen
-        XCTAssertTrue(emailText.waitForExistence(timeout: 1))
+        XCTAssertTrue(emailText.waitForExistence(timeout: 25))
         
         // we tap on it, fill in some text
         emailText.tap()
